@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+
+import '../Data/data.dart';
 
 class Person extends StatefulWidget {
   const Person({super.key});
@@ -8,8 +11,123 @@ class Person extends StatefulWidget {
 }
 
 class _PersonState extends State<Person> {
+    final FlutterTts flutterTts = FlutterTts();
+
+  speak(String text) async {
+    await flutterTts.setLanguage("th-TH");
+    await flutterTts.setPitch(1);
+    await flutterTts.speak(text);
+  }
+List<Map<String, dynamic>> _journals = [];
+  bool _isLoading = true;
+  void _refreshJournals() async {
+    final data = await SQLHelper.getItems();
+    setState(() {
+      _journals = data;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshJournals();
+    print("..number of items ${_journals.length}");
+  }
+
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+
+  Future<void> _addItem() async {
+    await SQLHelper.createItem(
+        _titleController.text, _descriptionController.text);
+    _refreshJournals();
+    print("...number of items ${_journals.length}");
+  }
+
+  void _showForm(int? id) async {
+    if (id != null) {
+      final existingJournal =
+          _journals.firstWhere((element) => element['id'] == id);
+      _titleController.text = existingJournal['title'];
+      _descriptionController.text = existingJournal['descption'];
+    }
+
+    showModalBottomSheet(
+        context: context,
+        elevation: 5,
+        isScrollControlled: true,
+        builder: (_) => Container(
+              padding: EdgeInsets.only(
+                top: 15,
+                left: 15,
+                right: 15,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 120,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  TextField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(hintText: 'ชื่อบุคคล'),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  TextField(
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(hintText: 'Description'),
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (id == null) {
+                        await _addItem();
+                      }
+                      if (id != null) {
+                        // await _updateItem(id);
+                      }
+                      _titleController.text = '';
+                      _descriptionController.text = '';
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(id == null ? 'เพิ่มบุคคล' : 'อัพเดตข้อมูล',),
+                  )
+                ],
+              ),
+            ));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return Scaffold(
+         appBar: AppBar(
+        title: Text(
+          "บุคคล",
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.green,
+      ),
+        body: ListView.builder(
+          itemCount: _journals.length,
+          itemBuilder: (context, index) => Card(
+            color: Colors.green[200],
+            margin: const EdgeInsets.all(15),
+            child: ListTile(
+              title: Text(_journals[index]['title']),
+              subtitle: Text(_journals[index]['description']),
+            ),
+          ),
+        ),
+        floatingActionButton: FloatingActionButton(
+            child: const Icon(Icons.add),
+            backgroundColor: Colors.green,
+            onPressed: () => _showForm(
+                  null,
+                ),));
   }
 }
