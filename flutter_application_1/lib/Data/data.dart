@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart' as sql;
 
 class SQLHelper {
@@ -8,6 +9,7 @@ class SQLHelper {
       description TEXT,
       createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)""");
   }
+  
 
   static Future<sql.Database> db() async {
     return sql.openDatabase(
@@ -38,17 +40,12 @@ class SQLHelper {
     return db.query('items', where: "id = ?", whereArgs: [id], limit: 1);
   }
 
-  static Future<int> updateItem(
-      int id, String title, String? descrption) async {
+  static Future<void> deleteItem(int id) async {
     final db = await SQLHelper.db();
-    final data = {
-      'title': title,
-      'description': descrption,
-      'createdAT': DateTime.now().toString()
-    };
-
-    final result =
-        await db.update('items', data, where: "id = ?", whereArgs: [id]);
-    return result;
+    try {
+      await db.delete("items", where: "id = ?", whereArgs: [id]);
+    } catch (err) {
+      debugPrint("Something went wrong when deleting an item: $err");
+    }
   }
 }
